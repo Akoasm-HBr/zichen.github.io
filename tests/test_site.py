@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import base64
 import hashlib
 import re
 import unittest
@@ -268,23 +269,34 @@ class CrossPageValidationTests(unittest.TestCase):
 
     def test_uhpb_photo_is_present_and_described_in_both_languages(self) -> None:
         image_path = ROOT / "assets" / "uhpb-poster.jpg"
+        fallback_path = ROOT / "assets" / "uhpb-poster.b64"
         self.assertTrue(image_path.is_file())
         self.assertEqual(
             hashlib.sha256(image_path.read_bytes()).hexdigest(),
             "e1bda02f359bcacf03d7b574c8c27772dfeb0ba6c46d4e146531418bbe2349cc",
         )
+        self.assertTrue(fallback_path.is_file())
+        self.assertEqual(
+            hashlib.sha256(base64.b64decode(fallback_path.read_text())).hexdigest(),
+            "e1bda02f359bcacf03d7b574c8c27772dfeb0ba6c46d4e146531418bbe2349cc",
+        )
         english = read_text("index.html")
         chinese = read_text("zh.html")
         self.assertIn('src="assets/uhpb-poster.jpg"', english)
+        self.assertIn('data-poster-fallback="assets/uhpb-poster.b64"', english)
         self.assertIn(
             'alt="Zichen Zhang presenting the Repli-HiC poster at the UHPB Annual Meeting"',
             english,
         )
         self.assertIn('src="assets/uhpb-poster.jpg"', chinese)
+        self.assertIn('data-poster-fallback="assets/uhpb-poster.b64"', chinese)
         self.assertIn(
             'alt="张梓宸在UHPB年会展示Repli-HiC研究墙报"',
             chinese,
         )
+        script = read_text("script.js")
+        self.assertIn("[data-poster-fallback]", script)
+        self.assertIn("data:image/jpeg;base64,", script)
 
 
 if __name__ == "__main__":

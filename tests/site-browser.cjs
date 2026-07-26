@@ -243,3 +243,22 @@ test("loads the UHPB poster photograph and its localized caption", async () => {
   }
   await page.close();
 });
+
+test("restores the poster from its text fallback when the JPEG is unavailable", async () => {
+  const page = await browser.newPage({
+    viewport: { width: 1200, height: 900 },
+  });
+  await page.route("**/assets/uhpb-poster.jpg", (route) => route.abort());
+  await page.goto(`${baseUrl}/index.html`);
+  await page.waitForFunction(() => {
+    const image = document.querySelector("[data-poster-fallback]");
+    return image?.src.startsWith("data:image/jpeg;base64,") &&
+      image.naturalWidth > 0;
+  });
+
+  const image = page.locator("[data-poster-fallback]");
+  const link = image.locator("xpath=ancestor::a");
+  assert.match(await image.getAttribute("src"), /^data:image\/jpeg;base64,/);
+  assert.match(await link.getAttribute("href"), /^data:image\/jpeg;base64,/);
+  await page.close();
+});

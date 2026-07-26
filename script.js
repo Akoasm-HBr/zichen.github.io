@@ -33,3 +33,29 @@ if (menuButton && siteNav) {
 document.querySelectorAll("[data-current-year]").forEach((node) => {
   node.textContent = String(new Date().getFullYear());
 });
+
+async function loadPosterFallback(image) {
+  const fallbackUrl = image.dataset.posterFallback;
+  if (!fallbackUrl || image.dataset.fallbackLoaded === "true") return;
+
+  image.dataset.fallbackLoaded = "true";
+
+  try {
+    const response = await fetch(fallbackUrl);
+    if (!response.ok) throw new Error(`Poster fallback failed: ${response.status}`);
+
+    const encodedImage = (await response.text()).replace(/\s+/g, "");
+    const dataUrl = `data:image/jpeg;base64,${encodedImage}`;
+    image.src = dataUrl;
+
+    const link = image.closest("a");
+    if (link) link.href = dataUrl;
+  } catch {
+    image.dataset.fallbackLoaded = "false";
+  }
+}
+
+document.querySelectorAll("[data-poster-fallback]").forEach((image) => {
+  image.addEventListener("error", () => loadPosterFallback(image), { once: true });
+  if (image.complete && image.naturalWidth === 0) loadPosterFallback(image);
+});

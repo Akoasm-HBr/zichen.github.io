@@ -153,3 +153,48 @@ test("updates localized mobile-menu labels as state changes", async () => {
   assert.equal(await chineseButton.getAttribute("aria-label"), "打开导航菜单");
   await page.close();
 });
+
+test("renders both pages without horizontal overflow at release viewports", async () => {
+  const viewports = [
+    { width: 1440, height: 1000, name: "desktop" },
+    { width: 820, height: 1180, name: "tablet" },
+    { width: 390, height: 844, name: "mobile" },
+    { width: 320, height: 720, name: "narrow" },
+  ];
+  const pages = [
+    { path: "index.html", name: "en" },
+    { path: "zh.html", name: "zh" },
+  ];
+
+  for (const pageSpec of pages) {
+    for (const viewport of viewports) {
+      const page = await browser.newPage({ viewport });
+      await page.goto(`${baseUrl}/${pageSpec.path}`);
+      await page.locator(".hero-photo img").waitFor({ state: "visible" });
+      const metrics = await page.evaluate(() => ({
+        viewport: document.documentElement.clientWidth,
+        content: document.documentElement.scrollWidth,
+        imageWidth: document.querySelector(".hero-photo img").naturalWidth,
+      }));
+      assert.ok(
+        metrics.content <= metrics.viewport,
+        `${pageSpec.name}/${viewport.name}: ${metrics.content}px exceeds ${metrics.viewport}px`,
+      );
+      assert.ok(
+        metrics.imageWidth > 0,
+        `${pageSpec.name}/${viewport.name}: profile image did not load`,
+      );
+      if (process.env.SITE_SCREENSHOT_DIR) {
+        fs.mkdirSync(process.env.SITE_SCREENSHOT_DIR, { recursive: true });
+        await page.screenshot({
+          path: path.join(
+            process.env.SITE_SCREENSHOT_DIR,
+            `${pageSpec.name}-${viewport.name}.png`,
+          ),
+          fullPage: true,
+        });
+      }
+      await page.close();
+    }
+  }
+});

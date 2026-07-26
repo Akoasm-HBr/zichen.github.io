@@ -1,7 +1,7 @@
 # Zichen Zhang Academic Resume Website — Design Specification
 
-Date: 2026-07-26  
-Status: Approved for implementation  
+Date: 2026-07-26
+Status: Approved for implementation
 Visual direction: A2 — modern academic editorial style
 
 ## 1. Objective

@@ -34,6 +34,8 @@
 - `script.js` — accessible mobile-menu enhancement and footer-year update only.
 - `photo.jpg` — existing profile photograph, retained unchanged.
 - `tests/test_site.py` — dependency-free regression tests for shared assets, copy, metadata, local references, links, and forbidden claims.
+- `tests/fixtures/shared.html` — real browser fixture for the shared CSS and mobile-menu contract.
+- `tests/site-browser.cjs` — Playwright tests for computed styles, no-JavaScript fallback, and mobile-menu behavior.
 - `README.md` — concise maintenance and local-preview instructions.
 
 ---
@@ -44,6 +46,8 @@
 - Create: `styles.css`
 - Create: `script.js`
 - Create: `tests/test_site.py`
+- Create: `tests/fixtures/shared.html`
+- Create: `tests/site-browser.cjs`
 
 **Interfaces:**
 - Consumes: the class and attribute contract defined below.
@@ -96,45 +100,151 @@ class SharedAssetTests(unittest.TestCase):
         self.assertTrue((ROOT / "styles.css").is_file())
         self.assertTrue((ROOT / "script.js").is_file())
 
-    def test_a2_design_tokens_and_responsive_rules_exist(self) -> None:
-        css = read_text("styles.css")
-        required = (
-            "--color-accent: #8f1d22",
-            "--font-serif:",
-            "--font-sans:",
-            ":focus-visible",
-            "@media (max-width: 52rem)",
-            "@media (prefers-reduced-motion: reduce)",
-        )
-        for token in required:
-            self.assertIn(token, css)
-
-    def test_mobile_menu_is_accessible(self) -> None:
-        script = read_text("script.js")
-        for token in (
-            'document.documentElement.classList.add("js")',
-            "data-menu-toggle",
-            "aria-expanded",
-            "data-site-nav",
-            "Escape",
-            "data-current-year",
-        ):
-            self.assertIn(token, script)
-
 
 if __name__ == "__main__":
     unittest.main()
 ```
 
-- [ ] **Step 2: Run the shared-asset tests and confirm failure**
+Create `tests/fixtures/shared.html` with a real page fragment that consumes the shared files:
+
+```html
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <link rel="stylesheet" href="../../styles.css">
+  <script src="../../script.js" defer></script>
+  <title>Shared asset fixture</title>
+</head>
+<body>
+  <div class="site-shell">
+    <header class="site-header">
+      <div class="header-inner">
+        <a class="brand" href="#content">Zichen Zhang</a>
+        <button class="menu-toggle" type="button" aria-expanded="false" aria-controls="site-nav" data-menu-toggle>Menu</button>
+        <nav class="site-nav" id="site-nav" data-site-nav>
+          <a href="#content">Content</a>
+          <a class="language-link" href="#language">中文</a>
+        </nav>
+      </div>
+    </header>
+    <main id="content">
+      <section class="hero"><div class="hero-copy"><h1>Fixture</h1></div><div class="hero-photo"></div></section>
+    </main>
+    <footer><span data-current-year>1900</span></footer>
+  </div>
+</body>
+</html>
+```
+
+Create `tests/site-browser.cjs`:
+
+```javascript
+const test = require("node:test");
+const assert = require("node:assert/strict");
+const http = require("node:http");
+const fs = require("node:fs");
+const path = require("node:path");
+const { chromium } = require("playwright");
+
+const root = path.resolve(__dirname, "..");
+let server;
+let browser;
+let baseUrl;
+
+test.before(async () => {
+  server = http.createServer((request, response) => {
+    const requestPath = decodeURIComponent(new URL(request.url, "http://localhost").pathname);
+    const relativePath = requestPath === "/" ? "index.html" : requestPath.replace(/^\/+/, "");
+    const filePath = path.resolve(root, relativePath);
+    if (!filePath.startsWith(root + path.sep)) {
+      response.writeHead(403).end();
+      return;
+    }
+    fs.readFile(filePath, (error, content) => {
+      if (error) {
+        response.writeHead(404).end();
+        return;
+      }
+      const type = filePath.endsWith(".css")
+        ? "text/css"
+        : filePath.endsWith(".js") ? "text/javascript" : "text/html";
+      response.writeHead(200, { "content-type": type });
+      response.end(content);
+    });
+  });
+  await new Promise((resolve) => server.listen(0, "127.0.0.1", resolve));
+  baseUrl = `http://127.0.0.1:${server.address().port}`;
+  browser = await chromium.launch();
+});
+
+test.after(async () => {
+  await browser.close();
+  await new Promise((resolve) => server.close(resolve));
+});
+
+test("applies the approved A2 visual foundation in a real browser", async () => {
+  const page = await browser.newPage({ viewport: { width: 1200, height: 800 } });
+  await page.goto(`${baseUrl}/tests/fixtures/shared.html`);
+  const visual = await page.evaluate(() => {
+    const rootStyle = getComputedStyle(document.documentElement);
+    const shellStyle = getComputedStyle(document.querySelector(".site-shell"));
+    const heroStyle = getComputedStyle(document.querySelector(".hero"));
+    return {
+      accent: rootStyle.getPropertyValue("--color-accent").trim(),
+      shellBackground: shellStyle.backgroundColor,
+      heroDisplay: heroStyle.display,
+    };
+  });
+  assert.deepEqual(visual, {
+    accent: "#8f1d22",
+    shellBackground: "rgb(255, 255, 255)",
+    heroDisplay: "grid",
+  });
+  await page.close();
+});
+
+test("keeps navigation visible when JavaScript is disabled", async () => {
+  const context = await browser.newContext({ javaScriptEnabled: false, viewport: { width: 390, height: 844 } });
+  const page = await context.newPage();
+  await page.goto(`${baseUrl}/tests/fixtures/shared.html`);
+  assert.equal(await page.locator("[data-site-nav]").evaluate((node) => getComputedStyle(node).display), "flex");
+  assert.equal(await page.locator("[data-menu-toggle]").evaluate((node) => getComputedStyle(node).display), "none");
+  await context.close();
+});
+
+test("opens and closes the mobile menu with pointer and keyboard input", async () => {
+  const page = await browser.newPage({ viewport: { width: 390, height: 844 } });
+  await page.goto(`${baseUrl}/tests/fixtures/shared.html`);
+  const button = page.locator("[data-menu-toggle]");
+  const nav = page.locator("[data-site-nav]");
+  await button.click();
+  assert.equal(await button.getAttribute("aria-expanded"), "true");
+  assert.equal(await nav.getAttribute("data-open"), "true");
+  await page.locator("[data-site-nav] a").first().click();
+  assert.equal(await button.getAttribute("aria-expanded"), "false");
+  await button.click();
+  await page.keyboard.press("Escape");
+  assert.equal(await button.getAttribute("aria-expanded"), "false");
+  assert.equal(await button.evaluate((node) => node === document.activeElement), true);
+  assert.notEqual(await page.locator("[data-current-year]").textContent(), "1900");
+  await page.close();
+});
+```
+
+- [ ] **Step 2: Run the shared-asset and browser tests and confirm failure**
 
 Run:
 
 ```bash
 python3 -m unittest tests.test_site.SharedAssetTests -v
+NODE_PATH=/Users/onebright/.cache/codex-runtimes/codex-primary-runtime/dependencies/node/node_modules \
+  /Users/onebright/.cache/codex-runtimes/codex-primary-runtime/dependencies/node/bin/node \
+  --test tests/site-browser.cjs
 ```
 
-Expected: FAIL because `styles.css` and `script.js` do not exist.
+Expected: FAIL because `styles.css` and `script.js` do not exist, and the browser cannot observe the shared visual and menu behavior.
 
 - [ ] **Step 3: Implement the shared stylesheet**
 
@@ -369,20 +479,23 @@ document.querySelectorAll("[data-current-year]").forEach((node) => {
 });
 ```
 
-- [ ] **Step 5: Run the shared-asset tests**
+- [ ] **Step 5: Run the shared-asset and real-browser tests**
 
 Run:
 
 ```bash
 python3 -m unittest tests.test_site.SharedAssetTests -v
+NODE_PATH=/Users/onebright/.cache/codex-runtimes/codex-primary-runtime/dependencies/node/node_modules \
+  /Users/onebright/.cache/codex-runtimes/codex-primary-runtime/dependencies/node/bin/node \
+  --test tests/site-browser.cjs
 ```
 
-Expected: 3 tests PASS.
+Expected: the Python shared-asset test and all three real-browser tests PASS.
 
 - [ ] **Step 6: Commit the shared foundation**
 
 ```bash
-git add styles.css script.js tests/test_site.py
+git add styles.css script.js tests/test_site.py tests/fixtures/shared.html tests/site-browser.cjs
 git commit -m "feat: add academic site visual foundation"
 ```
 

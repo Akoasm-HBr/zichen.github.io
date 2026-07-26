@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import hashlib
 import re
 import unittest
 from html.parser import HTMLParser
@@ -264,6 +265,26 @@ class CrossPageValidationTests(unittest.TestCase):
                 1,
                 f"{page}: expected one h1",
             )
+
+    def test_uhpb_photo_is_present_and_described_in_both_languages(self) -> None:
+        image_path = ROOT / "assets" / "uhpb-poster.jpg"
+        self.assertTrue(image_path.is_file())
+        self.assertEqual(
+            hashlib.sha256(image_path.read_bytes()).hexdigest(),
+            "e1bda02f359bcacf03d7b574c8c27772dfeb0ba6c46d4e146531418bbe2349cc",
+        )
+        english = read_text("index.html")
+        chinese = read_text("zh.html")
+        self.assertIn('src="assets/uhpb-poster.jpg"', english)
+        self.assertIn(
+            'alt="Zichen Zhang presenting the Repli-HiC poster at the UHPB Annual Meeting"',
+            english,
+        )
+        self.assertIn('src="assets/uhpb-poster.jpg"', chinese)
+        self.assertIn(
+            'alt="张梓宸在UHPB年会展示Repli-HiC研究墙报"',
+            chinese,
+        )
 
 
 if __name__ == "__main__":

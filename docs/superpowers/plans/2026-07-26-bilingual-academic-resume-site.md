@@ -20,7 +20,7 @@
 - List only the confirmed publication and two confirmed awards.
 - Do not invent clinical rotations, other awards, researcher identifiers, social profiles, or a downloadable CV.
 - Keep `photo.jpg`; do not delete or overwrite the source UHPB photograph.
-- The missing UHPB photograph must not be replaced with a fabricated image. Until the source is supplied again, omit the figure from the deployable page and retain the complete poster description in text.
+- Use the supplied UHPB photograph at `assets/uhpb-poster.jpg`; preserve the source file unchanged and never replace it with a fabricated image.
 - Both pages must remain functional without JavaScript and without network access.
 - Support keyboard navigation, visible focus, reduced motion, and 320 CSS-pixel viewports without horizontal overflow.
 
@@ -33,6 +33,7 @@
 - `styles.css` — A2 design tokens, layout, navigation, cards, responsive behavior, focus styles, and reduced-motion behavior.
 - `script.js` — accessible mobile-menu enhancement and footer-year update only.
 - `photo.jpg` — existing profile photograph, retained unchanged.
+- `assets/uhpb-poster.jpg` — approved UHPB poster-presentation photograph, copied without modification.
 - `tests/test_site.py` — dependency-free regression tests for shared assets, copy, metadata, local references, links, and forbidden claims.
 - `tests/fixtures/shared.html` — real browser fixture for the shared CSS and mobile-menu contract.
 - `tests/site-browser.cjs` — Playwright tests for computed styles, no-JavaScript fallback, and mobile-menu behavior.
@@ -665,7 +666,7 @@ Populate the skeleton with the following exact fact contract:
 | Skills | The complete computational, experimental, and research-agent skill lists from the design specification |
 | Footer | Bioinformatics; neuroscience; immunology; biomedical research agents and bioinformatics workflow automation; `silele2004@163.com`; `https://github.com/zichenpku` |
 
-Use `<img src="photo.jpg" alt="Portrait of Zichen Zhang">` in `.hero-photo`. Do not add a poster `<img>` until the approved source asset is available again.
+Use `<img src="photo.jpg" alt="Portrait of Zichen Zhang">` in `.hero-photo`. Use the approved `assets/uhpb-poster.jpg` in a localized `<figure class="poster-figure">` that links to the full photograph.
 
 Add JSON-LD limited to confirmed fields:
 
@@ -1010,7 +1011,7 @@ Open `http://localhost:8000/` and `http://localhost:8000/zh.html`.
 python3 -m unittest discover -s tests -v
 ```
 
-The deployable site intentionally omits the UHPB event photograph until the approved source file is supplied again. Do not substitute an unrelated or generated image.
+The UHPB event photograph is stored at `assets/uhpb-poster.jpg`. Keep the original source unchanged; do not substitute an unrelated or generated image.
 ````
 
 - [ ] **Step 2: Run automated regression and repository hygiene checks**
@@ -1055,7 +1056,7 @@ Verify:
 7. there is no horizontal overflow;
 8. the DOI, email, and GitHub links use the intended targets;
 9. both pages remain readable with JavaScript disabled;
-10. no fake UHPB image or pending placeholder appears in the deployable pages.
+10. the approved UHPB photograph and localized caption appear correctly, with no generated substitute or placeholder.
 
 - [ ] **Step 5: Stop the local server and rerun the final suite**
 

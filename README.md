@@ -9,6 +9,7 @@ Bilingual academic profile of Zichen Zhang, hosted with GitHub Pages.
 - `styles.css` — shared A2 academic editorial design
 - `script.js` — mobile navigation and current-year enhancement
 - `photo.jpg` — profile photograph
+- `assets/uhpb-poster.jpg` — UHPB poster-presentation photograph
 - `tests/test_site.py` — dependency-free regression tests
 - `tests/site-browser.cjs` — real-browser interaction and layout tests
 
@@ -29,4 +30,4 @@ NODE_PATH=/Users/onebright/.cache/codex-runtimes/codex-primary-runtime/dependenc
   --test tests/site-browser.cjs
 ```
 
-The deployable site intentionally omits the UHPB event photograph until the approved source file is supplied again. Do not substitute an unrelated or generated image.
+The UHPB event photograph is stored at `assets/uhpb-poster.jpg`. Keep the original source unchanged; do not substitute an unrelated or generated image.

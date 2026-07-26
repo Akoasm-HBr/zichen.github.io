@@ -175,6 +175,8 @@ test("renders both pages without horizontal overflow at release viewports", asyn
         viewport: document.documentElement.clientWidth,
         content: document.documentElement.scrollWidth,
         imageWidth: document.querySelector(".hero-photo img").naturalWidth,
+        posterImageWidth:
+          document.querySelector(".poster-figure img").naturalWidth,
       }));
       assert.ok(
         metrics.content <= metrics.viewport,
@@ -183,6 +185,10 @@ test("renders both pages without horizontal overflow at release viewports", asyn
       assert.ok(
         metrics.imageWidth > 0,
         `${pageSpec.name}/${viewport.name}: profile image did not load`,
+      );
+      assert.ok(
+        metrics.posterImageWidth > 0,
+        `${pageSpec.name}/${viewport.name}: poster image did not load`,
       );
       if (process.env.SITE_SCREENSHOT_DIR) {
         fs.mkdirSync(process.env.SITE_SCREENSHOT_DIR, { recursive: true });
@@ -197,4 +203,43 @@ test("renders both pages without horizontal overflow at release viewports", asyn
       await page.close();
     }
   }
+});
+
+test("loads the UHPB poster photograph and its localized caption", async () => {
+  const page = await browser.newPage({
+    viewport: { width: 1200, height: 900 },
+  });
+  await page.goto(`${baseUrl}/index.html`);
+  const englishFigure = page.locator(".poster-figure");
+  await englishFigure.scrollIntoViewIfNeeded();
+  assert.ok(
+    (await englishFigure.locator("img").evaluate((node) => node.naturalWidth)) > 0,
+  );
+  assert.match(
+    await englishFigure.locator("figcaption").textContent(),
+    /UHPB Annual Meeting · October 2025/,
+  );
+  if (process.env.SITE_SCREENSHOT_DIR) {
+    fs.mkdirSync(process.env.SITE_SCREENSHOT_DIR, { recursive: true });
+    await englishFigure.screenshot({
+      path: path.join(process.env.SITE_SCREENSHOT_DIR, "en-poster-detail.png"),
+    });
+  }
+
+  await page.goto(`${baseUrl}/zh.html`);
+  const chineseFigure = page.locator(".poster-figure");
+  await chineseFigure.scrollIntoViewIfNeeded();
+  assert.ok(
+    (await chineseFigure.locator("img").evaluate((node) => node.naturalWidth)) > 0,
+  );
+  assert.match(
+    await chineseFigure.locator("figcaption").textContent(),
+    /UHPB年会 · 2025年10月/,
+  );
+  if (process.env.SITE_SCREENSHOT_DIR) {
+    await chineseFigure.screenshot({
+      path: path.join(process.env.SITE_SCREENSHOT_DIR, "zh-poster-detail.png"),
+    });
+  }
+  await page.close();
 });

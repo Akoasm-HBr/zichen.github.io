@@ -22,7 +22,7 @@ Use a dependency-free static-site architecture:
 - `styles.css`: shared responsive visual system;
 - `script.js`: small progressive-enhancement layer for mobile navigation and current-year display;
 - `photo.jpg`: retain the existing profile photograph;
-- `assets/uhpb-poster.jpg`: optimized copy of the approved UHPB poster photograph when the source file is available.
+- `assets/uhpb-poster.jpg`: unchanged website copy of the approved UHPB poster photograph.
 
 The language selector must be a normal link between `index.html` and `zh.html`, so it remains functional without JavaScript. This is preferred over a JavaScript-only content toggle because it is simpler to maintain, more resilient, and gives each language a directly addressable page.
 
@@ -284,11 +284,13 @@ Before publication:
 9. inspect the rendered pages visually;
 10. compare the remote branch head with the recorded upstream snapshot before pushing.
 
-## 11. Known Pending Item
+## 11. Resolved Image Asset
 
-The original UHPB poster photograph was previously supplied through a temporary WeChat path that is no longer present on disk. Implementation may use an explicit placeholder only in the local draft. The public deployment must either:
+The original UHPB poster photograph was supplied again on 26 July 2026 and copied unchanged to `assets/uhpb-poster.jpg`.
 
-1. receive the image again and include an optimized copy; or
-2. omit the photograph without inventing a substitute.
+- format: JPEG;
+- dimensions: 1279 × 1706 pixels;
+- file size: 247,451 bytes;
+- SHA-256: `e1bda02f359bcacf03d7b574c8c27772dfeb0ba6c46d4e146531418bbe2349cc`.
 
-The original image must never be deleted or overwritten.
+The original image must never be deleted or overwritten. The website copy links to the full photograph and uses a cropped preview only through CSS.

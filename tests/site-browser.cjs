@@ -116,3 +116,40 @@ test("opens and closes the mobile menu with pointer and keyboard input", async (
   );
   await page.close();
 });
+
+test("switches between complete English and Chinese pages", async () => {
+  const page = await browser.newPage({
+    viewport: { width: 1200, height: 800 },
+  });
+  await page.goto(`${baseUrl}/index.html`);
+  await page.locator(".language-link").click();
+  await page.waitForURL(`${baseUrl}/zh.html`);
+  assert.equal(await page.locator("html").getAttribute("lang"), "zh-CN");
+  assert.match(await page.locator("h1").textContent(), /张梓宸/);
+  await page.locator(".language-link").click();
+  await page.waitForURL(`${baseUrl}/index.html`);
+  assert.equal(await page.locator("html").getAttribute("lang"), "en");
+  await page.close();
+});
+
+test("updates localized mobile-menu labels as state changes", async () => {
+  const page = await browser.newPage({
+    viewport: { width: 390, height: 844 },
+  });
+  await page.goto(`${baseUrl}/index.html`);
+  const englishButton = page.locator("[data-menu-toggle]");
+  assert.equal(await englishButton.getAttribute("aria-label"), "Open navigation");
+  await englishButton.click();
+  assert.equal(await englishButton.getAttribute("aria-label"), "Close navigation");
+  await page.keyboard.press("Escape");
+  assert.equal(await englishButton.getAttribute("aria-label"), "Open navigation");
+
+  await page.goto(`${baseUrl}/zh.html`);
+  const chineseButton = page.locator("[data-menu-toggle]");
+  assert.equal(await chineseButton.getAttribute("aria-label"), "打开导航菜单");
+  await chineseButton.click();
+  assert.equal(await chineseButton.getAttribute("aria-label"), "关闭导航菜单");
+  await page.keyboard.press("Escape");
+  assert.equal(await chineseButton.getAttribute("aria-label"), "打开导航菜单");
+  await page.close();
+});

@@ -6,6 +6,10 @@ const siteNav = document.querySelector("[data-site-nav]");
 function setMenu(open) {
   if (!menuButton || !siteNav) return;
   menuButton.setAttribute("aria-expanded", String(open));
+  menuButton.setAttribute(
+    "aria-label",
+    open ? menuButton.dataset.labelClose : menuButton.dataset.labelOpen,
+  );
   siteNav.dataset.open = String(open);
 }
 

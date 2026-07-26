@@ -178,5 +178,93 @@ class ChinesePageTests(unittest.TestCase):
             self.assertIn(text, self.html)
 
 
+class CrossPageValidationTests(unittest.TestCase):
+    def parsed(self, page: str) -> tuple[str, LinkCollector]:
+        html = read_text(page)
+        parser = LinkCollector()
+        parser.feed(html)
+        return html, parser
+
+    def test_local_links_assets_and_internal_anchors_resolve(self) -> None:
+        for page in PAGES:
+            _, parser = self.parsed(page)
+            for image in parser.images:
+                src = image.get("src", "")
+                self.assertTrue(
+                    image.get("alt", "").strip(),
+                    f"{page}: missing image alt",
+                )
+                if src and not urlparse(src).scheme:
+                    self.assertTrue(
+                        (ROOT / src).is_file(),
+                        f"{page}: missing {src}",
+                    )
+            for link in parser.links:
+                href = link.get("href", "")
+                if href.startswith("#"):
+                    self.assertIn(
+                        href[1:],
+                        parser.ids,
+                        f"{page}: missing anchor {href}",
+                    )
+                elif (
+                    href
+                    and not urlparse(href).scheme
+                    and not href.startswith("mailto:")
+                ):
+                    target = href.split("#", 1)[0]
+                    self.assertTrue(
+                        (ROOT / target).is_file(),
+                        f"{page}: missing {target}",
+                    )
+
+    def test_external_blank_targets_are_safe(self) -> None:
+        for page in PAGES:
+            _, parser = self.parsed(page)
+            for link in parser.links:
+                if link.get("target") == "_blank":
+                    rel = set(link.get("rel", "").split())
+                    self.assertTrue(
+                        {"noopener", "noreferrer"}.issubset(rel),
+                        f"{page}: unsafe target",
+                    )
+
+    def test_reciprocal_language_links_and_shared_assets(self) -> None:
+        english = read_text("index.html")
+        chinese = read_text("zh.html")
+        self.assertIn('href="zh.html"', english)
+        self.assertIn('href="index.html"', chinese)
+        for html in (english, chinese):
+            self.assertIn('href="styles.css"', html)
+            self.assertIn('src="script.js"', html)
+            self.assertIn(
+                'href="https://doi.org/10.13865/j.cnki.cjbmb.2025.08.1219"',
+                html,
+            )
+            self.assertIn('href="mailto:silele2004@163.com"', html)
+            self.assertIn('href="https://github.com/zichenpku"', html)
+
+    def test_metadata_and_semantics_exist(self) -> None:
+        for page in PAGES:
+            html = read_text(page)
+            for token in (
+                'rel="canonical"',
+                'hreflang="en"',
+                'hreflang="zh-CN"',
+                'hreflang="x-default"',
+                'property="og:title"',
+                'type="application/ld+json"',
+                'class="skip-link"',
+                "data-menu-toggle",
+                'aria-controls="site-nav"',
+            ):
+                self.assertIn(token, html, f"{page}: missing {token}")
+            self.assertEqual(
+                len(re.findall(r"<h1(?:\s|>)", html)),
+                1,
+                f"{page}: expected one h1",
+            )
+
+
 if __name__ == "__main__":
     unittest.main()
